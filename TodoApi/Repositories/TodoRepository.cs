@@ -23,6 +23,7 @@ namespace TodoApi.Repositories
             connection.Open();
 
             var command = connection.CreateCommand();
+            var createdAt = DateTime.UtcNow;
             command.CommandText = @"
                 INSERT INTO Todos (Title, Description, IsCompleted, CreatedAt)
                 VALUES (@title, @description, @isCompleted, @createdAt);
@@ -30,13 +31,13 @@ namespace TodoApi.Repositories
             ";
 
             command.Parameters.AddWithValue("@title", todo.Title ?? string.Empty);
-            command.Parameters.AddWithValue("@description", todo.Description ?? string.Empty);
+            command.Parameters.AddWithValue("@description", (object?)todo.Description ?? DBNull.Value);
             command.Parameters.AddWithValue("@isCompleted", todo.IsCompleted ? 1 : 0);
-            command.Parameters.AddWithValue("@createdAt", DateTime.UtcNow.ToString("o"));
+            command.Parameters.AddWithValue("@createdAt", createdAt.ToString("o"));
 
             var id = Convert.ToInt32(command.ExecuteScalar());
             todo.Id = id;
-            todo.CreatedAt = DateTime.UtcNow;
+            todo.CreatedAt = createdAt;
             return todo;
         }
 
@@ -92,7 +93,7 @@ namespace TodoApi.Repositories
             ";
 
             command.Parameters.AddWithValue("@title", todo.Title ?? string.Empty);
-            command.Parameters.AddWithValue("@description", todo.Description ?? string.Empty);
+            command.Parameters.AddWithValue("@description", (object?)todo.Description ?? DBNull.Value);
             command.Parameters.AddWithValue("@isCompleted", todo.IsCompleted ? 1 : 0);
             command.Parameters.AddWithValue("@id", id);
 

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\workspace\\C#\\TODO\\dotnet-interview\\TodoApi\\TodoApi.csproj": {}
+    "D:\\workspace\\C#\\todo\\dotnet-interview\\todoapi\\TodoApi.csproj": {}
   },
   "projects": {
-    "D:\\workspace\\C#\\TODO\\dotnet-interview\\TodoApi\\TodoApi.csproj": {
+    "D:\\workspace\\C#\\todo\\dotnet-interview\\todoapi\\TodoApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\workspace\\C#\\TODO\\dotnet-interview\\TodoApi\\TodoApi.csproj",
+        "projectUniqueName": "D:\\workspace\\C#\\todo\\dotnet-interview\\todoapi\\TodoApi.csproj",
         "projectName": "TodoApi",
-        "projectPath": "D:\\workspace\\C#\\TODO\\dotnet-interview\\TodoApi\\TodoApi.csproj",
+        "projectPath": "D:\\workspace\\C#\\todo\\dotnet-interview\\todoapi\\TodoApi.csproj",
         "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "D:\\workspace\\C#\\TODO\\dotnet-interview\\TodoApi\\obj\\",
+        "outputPath": "D:\\workspace\\C#\\todo\\dotnet-interview\\todoapi\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config"

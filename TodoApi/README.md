@@ -1,45 +1,25 @@
 # TODO API
 
-A simple TODO API built with ASP.NET Core 8.0.
+Simple ASP.NET Core TODO API backed by SQLite.
 
-## Getting Started
+## Running
 
-### Prerequisites
-- .NET 8.0 SDK
-
-### Running the Application
-
-1. Navigate to the TodoApi directory:
-```
-cd TodoApi
+```bash
+dotnet run --project TodoApi
 ```
 
-2. Run the application:
-```
-dotnet run
-```
+Swagger is available at `/swagger` when running in Development.
 
-3. The API will be available at `http://localhost:5164` (or check the console output for the exact URL)
+## Endpoints
 
-4. Access Swagger UI at `http://localhost:5164/swagger` to test the endpoints
-
-## API Endpoints
-
-All endpoints are under `/api`:
-
-- `POST /api/createTodo` - Create a new TODO item
-- `POST /api/getTodo` - Get TODO item(s)
-- `POST /api/updateTodo` - Update a TODO item
-- `POST /api/deleteTodo` - Delete a TODO item
+- `GET /api/todos` - list TODO items
+- `GET /api/todos/{id}` - retrieve one TODO item
+- `POST /api/todos` - create a TODO item
+- `PUT /api/todos/{id}` - update a TODO item
+- `DELETE /api/todos/{id}` - delete a TODO item
 
 ## Testing
 
-Run the tests with:
-```
-cd TodoApi.Tests
+```bash
 dotnet test
 ```
-
-## Database
-
-The application uses SQLite with a file-based database (`todos.db`) that is automatically created on startup.
