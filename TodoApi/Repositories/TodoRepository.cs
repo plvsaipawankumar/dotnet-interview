@@ -58,7 +58,7 @@ namespace TodoApi.Repositories
             return todos;
         }
 
-        public Todo GetById(int id)
+        public Todo? GetById(int id)
         {
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
@@ -76,7 +76,7 @@ namespace TodoApi.Repositories
             return null;
         }
 
-        public Todo Update(int id, Todo todo)
+        public Todo? Update(int id, Todo todo)
         {
             if (todo == null)
                 throw new ArgumentNullException(nameof(todo));
@@ -97,8 +97,10 @@ namespace TodoApi.Repositories
             command.Parameters.AddWithValue("@id", id);
 
             var rowsAffected = command.ExecuteNonQuery();
-            todo.Id = id;
-            return todo;
+            if (rowsAffected == 0)
+                return null;
+
+            return GetById(id);
         }
 
         public bool Delete(int id)
@@ -120,9 +122,9 @@ namespace TodoApi.Repositories
             {
                 Id = reader.GetInt32(0),
                 Title = reader.GetString(1),
-                Description = reader.GetString(2),
+                Description = reader.IsDBNull(2) ? null : reader.GetString(2),
                 IsCompleted = reader.GetInt32(3) == 1,
-                CreatedAt = DateTime.Parse(reader.GetString(4))
+                CreatedAt = DateTime.Parse(reader.GetString(4), null, System.Globalization.DateTimeStyles.RoundtripKind)
             };
         }
     }

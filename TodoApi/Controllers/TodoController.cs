@@ -1,121 +1,178 @@
 using Microsoft.AspNetCore.Mvc;
+using TodoApi.DTOs;
 using TodoApi.Models;
 using TodoApi.Services;
 
 namespace TodoApi.Controllers
 {
     [ApiController]
-    [Route("api")]
+    [Route("api/todos")]
     public class TodoController : ControllerBase
     {
         private readonly ITodoService _todoService;
+        private readonly ILogger<TodoController> _logger;
 
-        public TodoController(ITodoService todoService)
+        public TodoController(ITodoService todoService, ILogger<TodoController> logger)
         {
             _todoService = todoService ?? throw new ArgumentNullException(nameof(todoService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        [HttpPost("createTodo")]
-        public IActionResult CreateTodo([FromBody] Todo todo)
+        /// <summary>
+        /// Get all todo items
+        /// </summary>
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public IActionResult GetAllTodos()
         {
             try
             {
-                var result = _todoService.CreateTodo(todo);
-                return Ok(result);
+                var todos = _todoService.GetAllTodos();
+                var todoDtos = todos.Select(MapTodoToDto).ToList();
+                return Ok(ApiResponse<List<TodoDto>>.SuccessResponse(todoDtos, "Todos retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                _logger.LogError(ex, "Error retrieving todos");
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    ApiResponse<object>.ErrorResponse("An error occurred while retrieving todos"));
             }
         }
 
-        [HttpPost("getTodo")]
-        public IActionResult GetTodo([FromBody] GetTodoRequest request)
+        /// <summary>
+        /// Get a specific todo item by id
+        /// </summary>
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult GetTodoById(int id)
         {
             try
             {
-                if (request.Id.HasValue)
+                var todo = _todoService.GetTodoById(id);
+                if (todo == null)
                 {
-                    var todo = _todoService.GetTodoById(request.Id.Value);
-                    if (todo == null)
-                    {
-                        return NotFound();
-                    }
-                    return Ok(todo);
+                    return NotFound(ApiResponse<object>.ErrorResponse($"Todo with id {id} not found"));
                 }
-                else
-                {
-                    var todos = _todoService.GetAllTodos();
-                    return Ok(todos);
-                }
+
+                return Ok(ApiResponse<TodoDto>.SuccessResponse(MapTodoToDto(todo), "Todo retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                _logger.LogError(ex, "Error retrieving todo with id {TodoId}", id);
+                return HandleException(ex, "An error occurred while retrieving the todo");
             }
         }
 
-        [HttpPost("updateTodo")]
-        public IActionResult UpdateTodo([FromBody] UpdateTodoRequest request)
+        /// <summary>
+        /// Create a new todo item
+        /// </summary>
+        [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public IActionResult CreateTodo([FromBody] CreateTodoRequest request)
         {
             try
             {
-                var existingTodo = _todoService.GetTodoById(request.Id);
-                if (existingTodo == null)
-                {
-                    return NotFound();
-                }
-
                 var todo = new Todo
                 {
-                    Title = request.Title,
-                    Description = request.Description,
-                    IsCompleted = request.IsCompleted
+                    Title = request?.Title ?? string.Empty,
+                    Description = request?.Description,
+                    IsCompleted = false
                 };
 
-                var result = _todoService.UpdateTodo(request.Id, todo);
-                return Ok(result);
+                var createdTodo = _todoService.CreateTodo(todo);
+                var todoDto = MapTodoToDto(createdTodo);
+
+                return CreatedAtAction(nameof(GetTodoById), new { id = createdTodo.Id },
+                    ApiResponse<TodoDto>.SuccessResponse(todoDto, "Todo created successfully"));
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                _logger.LogError(ex, "Error creating todo");
+                return HandleException(ex, "An error occurred while creating the todo");
             }
         }
 
-        [HttpPost("deleteTodo")]
-        public IActionResult DeleteTodo([FromBody] DeleteTodoRequest request)
+        /// <summary>
+        /// Update an existing todo item
+        /// </summary>
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public IActionResult UpdateTodo(int id, [FromBody] UpdateTodoRequest request)
         {
             try
             {
-                var result = _todoService.DeleteTodo(request.Id);
-                if (result)
+                var todo = new Todo
                 {
-                    return Ok(new { message = "Todo deleted successfully" });
+                    Title = request?.Title ?? string.Empty,
+                    Description = request?.Description,
+                    IsCompleted = request?.IsCompleted ?? false
+                };
+
+                var updatedTodo = _todoService.UpdateTodo(id, todo);
+                if (updatedTodo == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResponse($"Todo with id {id} not found"));
                 }
-                return NotFound();
+
+                return Ok(ApiResponse<TodoDto>.SuccessResponse(MapTodoToDto(updatedTodo), "Todo updated successfully"));
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                _logger.LogError(ex, "Error updating todo with id {TodoId}", id);
+                return HandleException(ex, "An error occurred while updating the todo");
             }
         }
-    }
 
-    public class GetTodoRequest
-    {
-        public int? Id { get; set; }
-    }
+        /// <summary>
+        /// Delete a todo item
+        /// </summary>
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult DeleteTodo(int id)
+        {
+            try
+            {
+                var result = _todoService.DeleteTodo(id);
+                if (result)
+                {
+                    return Ok(ApiResponse<object>.SuccessResponse(null, "Todo deleted successfully"));
+                }
 
-    public class UpdateTodoRequest
-    {
-        public int Id { get; set; }
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public bool IsCompleted { get; set; }
-    }
+                return NotFound(ApiResponse<object>.ErrorResponse("Failed to delete todo"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting todo with id {TodoId}", id);
+                return HandleException(ex, "An error occurred while deleting the todo");
+            }
+        }
 
-    public class DeleteTodoRequest
-    {
-        public int Id { get; set; }
+        private ObjectResult HandleException(Exception exception, string fallbackMessage)
+        {
+            if (exception is ArgumentException || exception is ArgumentNullException)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(exception.Message));
+            }
+
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                ApiResponse<object>.ErrorResponse(fallbackMessage));
+        }
+
+        private static TodoDto MapTodoToDto(Todo todo)
+        {
+            return new TodoDto
+            {
+                Id = todo.Id,
+                Title = todo.Title,
+                Description = todo.Description,
+                IsCompleted = todo.IsCompleted,
+                CreatedAt = todo.CreatedAt
+            };
+        }
     }
 }

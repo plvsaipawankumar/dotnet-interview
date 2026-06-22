@@ -7,8 +7,8 @@ namespace TodoApi.Services
     {
         Todo CreateTodo(Todo todo);
         List<Todo> GetAllTodos();
-        Todo GetTodoById(int id);
-        Todo UpdateTodo(int id, Todo todo);
+        Todo? GetTodoById(int id);
+        Todo? UpdateTodo(int id, Todo todo);
         bool DeleteTodo(int id);
     }
 
@@ -26,7 +26,9 @@ namespace TodoApi.Services
             if (todo == null)
                 throw new ArgumentNullException(nameof(todo));
 
-            return _repository.Create(todo);
+            ValidateTodo(todo);
+
+            return _repository.Create(NormalizeTodo(todo));
         }
 
         public List<Todo> GetAllTodos()
@@ -34,7 +36,7 @@ namespace TodoApi.Services
             return _repository.GetAll();
         }
 
-        public Todo GetTodoById(int id)
+        public Todo? GetTodoById(int id)
         {
             if (id <= 0)
                 throw new ArgumentException("Id must be greater than zero", nameof(id));
@@ -42,7 +44,7 @@ namespace TodoApi.Services
             return _repository.GetById(id);
         }
 
-        public Todo UpdateTodo(int id, Todo todo)
+        public Todo? UpdateTodo(int id, Todo todo)
         {
             if (id <= 0)
                 throw new ArgumentException("Id must be greater than zero", nameof(id));
@@ -50,11 +52,9 @@ namespace TodoApi.Services
             if (todo == null)
                 throw new ArgumentNullException(nameof(todo));
 
-            var existingTodo = _repository.GetById(id);
-            if (existingTodo == null)
-                throw new InvalidOperationException($"Todo with id {id} not found");
+            ValidateTodo(todo);
 
-            return _repository.Update(id, todo);
+            return _repository.Update(id, NormalizeTodo(todo));
         }
 
         public bool DeleteTodo(int id)
@@ -62,11 +62,29 @@ namespace TodoApi.Services
             if (id <= 0)
                 throw new ArgumentException("Id must be greater than zero", nameof(id));
 
-            var existingTodo = _repository.GetById(id);
-            if (existingTodo == null)
-                throw new InvalidOperationException($"Todo with id {id} not found");
-
             return _repository.Delete(id);
+        }
+
+        private static void ValidateTodo(Todo todo)
+        {
+            if (string.IsNullOrWhiteSpace(todo.Title))
+                throw new ArgumentException("Title is required", nameof(todo));
+
+            if (todo.Title.Length > 200)
+                throw new ArgumentException("Title cannot exceed 200 characters", nameof(todo));
+
+            if (todo.Description?.Length > 1000)
+                throw new ArgumentException("Description cannot exceed 1000 characters", nameof(todo));
+        }
+
+        private static Todo NormalizeTodo(Todo todo)
+        {
+            todo.Title = todo.Title.Trim();
+            todo.Description = string.IsNullOrWhiteSpace(todo.Description)
+                ? null
+                : todo.Description.Trim();
+
+            return todo;
         }
     }
 }
