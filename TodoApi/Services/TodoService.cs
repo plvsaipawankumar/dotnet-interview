@@ -1,111 +1,72 @@
-using Microsoft.Data.Sqlite;
 using TodoApi.Models;
+using TodoApi.Repositories;
 
 namespace TodoApi.Services
 {
-    public class TodoService
+    public interface ITodoService
     {
-        private string _connectionString = "Data Source=todos.db";
+        Todo CreateTodo(Todo todo);
+        List<Todo> GetAllTodos();
+        Todo GetTodoById(int id);
+        Todo UpdateTodo(int id, Todo todo);
+        bool DeleteTodo(int id);
+    }
 
-        public TodoService()
+    public class TodoService : ITodoService
+    {
+        private readonly ITodoRepository _repository;
+
+        public TodoService(ITodoRepository repository)
         {
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         }
 
         public Todo CreateTodo(Todo todo)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            if (todo == null)
+                throw new ArgumentNullException(nameof(todo));
 
-            var command = connection.CreateCommand();
-            command.CommandText = $@"
-                INSERT INTO Todos (Title, Description, IsCompleted, CreatedAt)
-                VALUES ('{todo.Title}', '{todo.Description}', {(todo.IsCompleted ? 1 : 0)}, '{DateTime.UtcNow.ToString("o")}');
-                SELECT last_insert_rowid();
-            ";
-
-            var id = Convert.ToInt32(command.ExecuteScalar());
-            todo.Id = id;
-            todo.CreatedAt = DateTime.UtcNow;
-            return todo;
+            return _repository.Create(todo);
         }
 
         public List<Todo> GetAllTodos()
         {
-            var todos = new List<Todo>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Todos";
-
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                todos.Add(new Todo
-                {
-                    Id = reader.GetInt32(0),
-                    Title = reader.GetString(1),
-                    Description = reader.GetString(2),
-                    IsCompleted = reader.GetInt32(3) == 1,
-                    CreatedAt = DateTime.Parse(reader.GetString(4))
-                });
-            }
-
-            return todos;
+            return _repository.GetAll();
         }
 
         public Todo GetTodoById(int id)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            if (id <= 0)
+                throw new ArgumentException("Id must be greater than zero", nameof(id));
 
-            var command = connection.CreateCommand();
-            command.CommandText = $"SELECT * FROM Todos WHERE Id = {id}";
-
-            using var reader = command.ExecuteReader();
-            if (reader.Read())
-            {
-                return new Todo
-                {
-                    Id = reader.GetInt32(0),
-                    Title = reader.GetString(1),
-                    Description = reader.GetString(2),
-                    IsCompleted = reader.GetInt32(3) == 1,
-                    CreatedAt = DateTime.Parse(reader.GetString(4))
-                };
-            }
-
-            return null;
+            return _repository.GetById(id);
         }
 
         public Todo UpdateTodo(int id, Todo todo)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            if (id <= 0)
+                throw new ArgumentException("Id must be greater than zero", nameof(id));
 
-            var command = connection.CreateCommand();
-            command.CommandText = $@"
-                UPDATE Todos
-                SET Title = '{todo.Title}', Description = '{todo.Description}', IsCompleted = {(todo.IsCompleted ? 1 : 0)}
-                WHERE Id = {id}
-            ";
+            if (todo == null)
+                throw new ArgumentNullException(nameof(todo));
 
-            var rowsAffected = command.ExecuteNonQuery();
+            var existingTodo = _repository.GetById(id);
+            if (existingTodo == null)
+                throw new InvalidOperationException($"Todo with id {id} not found");
 
-            todo.Id = id;
-            return todo;
+            return _repository.Update(id, todo);
         }
 
         public bool DeleteTodo(int id)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            if (id <= 0)
+                throw new ArgumentException("Id must be greater than zero", nameof(id));
 
-            var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM Todos WHERE Id = {id}";
+            var existingTodo = _repository.GetById(id);
+            if (existingTodo == null)
+                throw new InvalidOperationException($"Todo with id {id} not found");
 
-            var rowsAffected = command.ExecuteNonQuery();
-            return rowsAffected > 0;
+            return _repository.Delete(id);
         }
     }
 }
